@@ -1,0 +1,42 @@
+package application;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import com.google.gson.Gson;
+
+public class Message {
+	public enum MessageType {
+		// mensagens de requisição
+		PUT,
+		GET,
+		REPLICATION,
+		// mensagens de resposta
+		PUT_OK,
+		PUT_NOK
+	}
+	
+	private MessageType type;
+	private UUID id;
+	private String key;
+	private LocalDateTime sendTimeStamp;
+	
+	public Message(MessageType type) {
+		this.type = type;
+		this.id = UUID.randomUUID();
+	}
+	
+	public String toJson() {
+		Gson gson = new Gson();
+		String json = gson.toJson(this);
+		return json;
+	}
+	
+	public static Message fromJson(String json) {
+		Gson gson = new Gson();
+		Message message = gson.fromJson(json, Message.class);
+		return message;
+	}	
+}
+
+

@@ -1,0 +1,15 @@
+package application;
+
+public class Message {
+	
+}
+
+public enum MessageType {
+	// mensagens de requisição
+	PUT,
+	GET,
+	REPLICATION,
+	// mensagens de resposta
+	PUT_OK,
+	PUT_NOK
+}

@@ -1,0 +1,25 @@
+package application;
+
+import java.net.InetAddress;
+import java.net.Socket;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+
+public class Server {
+
+	Socket socket;
+	InetAddress ip;
+	Integer port;
+	Map<String, LocalDateTime> register = new HashMap<String, LocalDateTime>();
+	
+	
+	
+	
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+
+}

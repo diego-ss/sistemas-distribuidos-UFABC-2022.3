@@ -1,0 +1,63 @@
+package application;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import application.Message.MessageType;
+
+
+public class Server {
+
+	ServerSocket serverSocket;
+	InetAddress ip;
+	Integer port;
+	Integer leaderPort;
+	
+	Map<String, LocalDateTime> register = new HashMap<String, LocalDateTime>();
+	
+	
+	
+	
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	private void createSocket() {
+		Thread th = new Thread(() -> {
+			// canal de comunicação não orientado à conexão
+			serverSocket = null;
+			try {
+				serverSocket = new ServerSocket(port);
+			}
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			while (true && serverSocket != null) {
+				try {
+					// recebendo pacote
+					serverSocket.accept();
+					
+				} catch (IOException e) {
+					if(!e.getMessage().toUpperCase().equals("Socket Closed".toUpperCase()))
+						e.printStackTrace();
+				}
+			}
+		});
+
+		th.start();
+	}
+
+}

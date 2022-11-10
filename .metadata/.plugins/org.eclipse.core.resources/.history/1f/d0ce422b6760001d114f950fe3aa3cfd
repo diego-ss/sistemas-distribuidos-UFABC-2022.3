@@ -1,0 +1,87 @@
+package application;
+
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+
+
+public class Client {
+	
+	// relação de portas dos servidores
+	private Set<Integer> serversPorts = new HashSet<Integer>();
+	
+	private static Scanner keyboard;
+	
+	public Client() {
+
+	}
+	
+	public void addServerPort(Integer port) {
+		serversPorts.add(port);
+	}
+	
+	public void sendMessage(String key) {
+		Thread th = new Thread(() -> {
+			
+			Integer port = getRandomPort();
+			
+			try {
+				Socket s = new Socket("127.0.0.1", port);
+				OutputStream os = s.getOutputStream();
+				Message message = new Message();
+				message.setAsPut("first_key", "teste_value");
+				String msgJson = message.toJson();
+				
+				ObjectOutputStream obj = new ObjectOutputStream(os);
+				
+				
+				
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+		
+		th.start();
+	}
+	
+	private Integer getRandomPort() {
+		Random random = new Random();
+		int randomIndex = random.nextInt(serversPorts.size());
+		
+		Iterator<Integer> iterator = serversPorts.iterator();
+		  
+        int currentIndex = 0;
+        Integer randomElement = null;
+  
+        // iterate the HashSet
+        while (iterator.hasNext()) {
+  
+            randomElement = iterator.next();
+  
+            // if current index is equal to random number
+            if (currentIndex == randomIndex)
+                return randomElement;
+  
+            // increase the current index
+            currentIndex++;
+        }
+  
+        return randomElement;
+	}
+	
+	public static void main(String[] args) {
+		
+		Client client = new Client();
+		
+	}
+
+}

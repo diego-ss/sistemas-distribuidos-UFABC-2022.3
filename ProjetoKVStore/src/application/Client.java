@@ -24,11 +24,21 @@ public class Client {
 	public Client() {
 
 	}
-
+	
+	/**
+	 * Adiciona portas de servidores à lista
+	 * @param port - porta do servidor
+	 */
 	public void addServerPort(Integer port) {
 		serversPorts.add(port);
 	}
 
+	/**
+	 * Envia uma mensagem do tipo PUT a um servidor aleatória da lista 
+	 * De servidores
+	 * @param key - chave do novo item
+	 * @param value - valor do novo item
+	 */
 	public void sendPutMessage(String key, String value) {
 		Thread th = new Thread(() -> {
 			// criando mensagem
@@ -41,6 +51,10 @@ public class Client {
 		th.start();
 	}
 	
+	/**
+	 * Envia uma mensagem do tipo GET a um servidor aleatório da lista
+	 * @param key - chave do item buscado
+	 */
 	public void sendGetMessage(String key) {
 		Thread th = new Thread(() -> {
 			// criando mensagem
@@ -53,6 +67,11 @@ public class Client {
 		th.start();
 	}
 
+	/**
+	 * Envio de mensagens aos servidores
+	 * @param message - mensagem a ser enviada
+	 * @return resposta do servidor
+	 */
 	public Message sendMessage(Message message) {
 		try {
 			// pegando servidor aleatório
@@ -80,6 +99,10 @@ public class Client {
 		} 
 	}
 
+	/**
+	 * Seleciona aleatoriamente uma porta da lista de portas
+	 * @return porta de servidor aleatória
+	 */
 	private Integer getRandomPort() {
 		Random random = new Random();
 		int randomIndex = random.nextInt(serversPorts.size());
@@ -104,6 +127,8 @@ public class Client {
 
 		return randomElement;
 	}
+	
+	// MÉTODO MAIN -------------------------------------------
 
 	public static void main(String[] args) {
 		keyboard = new Scanner(System.in);
@@ -136,7 +161,10 @@ public class Client {
 				
 				client.sendPutMessage(key, value);
 			} else if (option.contains("3") || option.toUpperCase().contains("GET")) {
-
+				System.out.print("Informe a chave: ");
+				String key = keyboard.next();
+				
+				client.sendGetMessage(key);
 			} else
 				continue;
 

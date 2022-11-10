@@ -1,7 +1,0 @@
-INDEX VERSION 1.131+C:\Users\Usuário\OneDrive\Desktop\Faculdade\Sistemas Distribuídos\.metadata\.plugins\org.eclipse.jdt.core
-4270117979.index
-2245457387.index
-1946582570.index
-819171405.index
-2159265395.index
-1865797976.index

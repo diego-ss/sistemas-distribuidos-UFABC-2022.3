@@ -8,9 +8,13 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Scanner;
+
+import application.Message.MessageType;
 
 public class Server {
 
@@ -21,8 +25,9 @@ public class Server {
 	
 	Hashtable<String, List<Object>> register = new Hashtable<String, List<Object>>();
 	
-	public Server(String ip, Integer port) {
+	public Server(String ip, Integer port, Integer leaderPort) {
 		this.port = port;
+		this.leaderPort = leaderPort;
 		createSocket();
 	}
 	
@@ -34,7 +39,6 @@ public class Server {
 				serverSocket = new ServerSocket(port);
 			}
 			catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
@@ -42,7 +46,6 @@ public class Server {
 				try {
 					// recebendo pacote
 					Socket client = serverSocket.accept();
-					System.out.println("Mensagem recebida");
 					getMessage(client);
 					
 				} catch (IOException e) {
@@ -54,7 +57,49 @@ public class Server {
 
 		th.start();
 	}
-
+	
+	private void checkGetMessage(Message message, Socket socket) {
+		
+	}
+	
+	private void checkPutMessage(Message message, Socket socket) throws IOException {
+		if(iAmLeader()) {
+			// tratar mensagem
+			register.put(message.getKey(), Arrays.asList(message.getValue(), LocalDateTime.now()));
+			
+			// enviar replication
+			
+			// envia PUT_OK
+			Message putOkMsg = new Message();
+			putOkMsg.setAsPutOk(message.getKey(), message.getValue(), LocalDateTime.now());
+			sendMessage(putOkMsg, socket);
+		} else {
+			Socket s = new Socket("127.0.0.1", leaderPort);
+			sendMessage(message, s);
+			InputStreamReader is = new InputStreamReader(s.getInputStream());
+			BufferedReader reader = new BufferedReader(is);
+			String response = reader.readLine();
+			Message responseMsg = Message.fromJson(response);
+			s.close();
+			
+			sendMessage(responseMsg, socket);
+		}
+	}
+		
+	private Boolean iAmLeader() {
+		return leaderPort.equals(port);
+	}
+	
+	private void sendMessage(Message message, Socket originSocket) throws IOException {
+		
+		OutputStream os = originSocket.getOutputStream();
+		
+		DataOutputStream writer = new DataOutputStream(os);
+		
+		String msgJson = message.toJson();
+		writer.writeBytes(msgJson + "\n");
+	}
+	
 	private void getMessage(Socket socket) throws IOException {
 		InputStreamReader is = new InputStreamReader(socket.getInputStream());
 		BufferedReader reader = new BufferedReader(is);
@@ -64,14 +109,12 @@ public class Server {
 		
 		String receivedMsgJson = reader.readLine();
 		Message receivedMsg = Message.fromJson(receivedMsgJson);
-		System.out.println(receivedMsg);
+		System.out.println("Mensagem recebida: " + receivedMsg);
 		
-		// enviando mensagem
-		Message message = new Message();
-		message.setAsPutOk();
-		message.setValue("Object has been saved");
-		String msgJson = message.toJson();
-		writer.writeBytes(msgJson + "\n");
+		if(receivedMsg.getType() == MessageType.PUT)
+			checkPutMessage(receivedMsg, socket);
+		else if(receivedMsg.getType() == MessageType.GET)
+			checkGetMessage(receivedMsg, socket);
 	}
 	
 	
@@ -80,10 +123,18 @@ public class Server {
 	public static void main(String[] args) {
 		
 		keyboard = new Scanner(System.in);
+		System.out.println("Informe o IP: ");
 		String ip = keyboard.next();
+		System.out.println("Informe a porta: ");
 		Integer port = keyboard.nextInt();
 		
-		Server server = new Server(ip, port);
+		System.out.println("Informe a porta do líder: ");
+		Integer leaderPort = keyboard.nextInt();
+
+		
+		new Server(ip, port, leaderPort);
 		System.out.println("Servidor online");
+		
+		
 	}
 }

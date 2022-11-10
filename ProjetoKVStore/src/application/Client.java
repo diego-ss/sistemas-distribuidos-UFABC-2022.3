@@ -31,13 +31,23 @@ public class Client {
 
 	public void sendPutMessage(String key, String value) {
 		Thread th = new Thread(() -> {
-
 			// criando mensagem
 			Message message = new Message();
-			message.setAsPut("key", "value");
-			
+			message.setAsPut(key, value);
+			// aguardando resposta
 			Message response = sendMessage(message);
+		});
 
+		th.start();
+	}
+	
+	public void sendGetMessage(String key) {
+		Thread th = new Thread(() -> {
+			// criando mensagem
+			Message message = new Message();
+			message.setAsGet(key);
+			// aguardando resposta
+			Message response = sendMessage(message);
 		});
 
 		th.start();
@@ -60,7 +70,7 @@ public class Client {
 			writer.writeBytes(msgJson + "\n");
 			String response = reader.readLine();
 			Message responseMsg = Message.fromJson(response);
-			System.out.println(response);
+			System.out.println(responseMsg);
 			s.close();
 			return responseMsg;
 			
@@ -116,8 +126,15 @@ public class Client {
 				client.addServerPort(keyboard.nextInt());
 				client.addServerPort(keyboard.nextInt());
 				client.addServerPort(keyboard.nextInt());
+				
 			} else if (option.contains("2") || option.toUpperCase().contains("PUT")) {
-				client.sendPutMessage("key_mock", "value_mock");
+				System.out.print("Informe a chave: ");
+				String key = keyboard.next();
+				
+				System.out.print("\nInforme o valor: ");
+				String value = keyboard.next();
+				
+				client.sendPutMessage(key, value);
 			} else if (option.contains("3") || option.toUpperCase().contains("GET")) {
 
 			} else

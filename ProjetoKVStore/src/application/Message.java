@@ -1,5 +1,7 @@
 package application;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 import com.google.gson.Gson;
@@ -19,6 +21,7 @@ public class Message {
 	private UUID id;
 	private String key;
 	private String value;
+	private String timeStamp;
 	
 	public Message() {
 		this.id = UUID.randomUUID();
@@ -31,8 +34,13 @@ public class Message {
 		this.value = value;
 	}
 	
-	public void setAsPutOk() {
-		this.type = MessageType.PUT_OK;
+	public void setAsPutOk(String key, String value, LocalDateTime timeStamp) {
+		this.type = MessageType.PUT_OK;		
+		this.key = key;
+		this.value = value;
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+		this.timeStamp = timeStamp.format(formatter);
 	}
 	
 	public void setAsGet(String key) {
@@ -69,6 +77,25 @@ public class Message {
 		this.value = value;
 	}
 
+	public String getTimeStamp() {
+		return timeStamp;
+	}
+
+
+	public void setTimeStamp(String timeStamp) {
+		this.timeStamp = timeStamp;
+	}
+
+
+	public MessageType getType() {
+		return type;
+	}
+
+
+	public void setType(MessageType type) {
+		this.type = type;
+	}
+
 
 	public String toJson() {
 		Gson gson = new Gson();
@@ -95,7 +122,7 @@ public class Message {
 	
 	@Override
 	public String toString() {
-		return "Message [type=" + type + ", id=" + id + ", key=" + key + ", value=" + value + "]";
+		return "Message [type=" + type + ", id=" + id + ", key=" + key + ", value=" + value + ", timeStamp=" + timeStamp + "]";
 	}
 
 

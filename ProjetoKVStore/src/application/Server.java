@@ -10,9 +10,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 
 import application.Message.MessageType;
 
@@ -26,6 +28,7 @@ public class Server {
 	// hash table no formato 
 	// (key (string), { value (string), timeStamp (localdatetime)})
 	Hashtable<String, List<Object>> register = new Hashtable<String, List<Object>>();
+	
 	
 	public Server(String ip, Integer port, Integer leaderPort) {
 		this.port = port;
@@ -86,14 +89,21 @@ public class Server {
 	private void checkPutMessage(Message message, Socket clientSocket) throws IOException {
 		if(iAmLeader()) {
 			// registra key, value e time stamp
-			register.put(message.getKey(), Arrays.asList(message.getValue(), LocalDateTime.now()));
+			List<Object> values = Arrays.asList(message.getValue(), LocalDateTime.now());
+			register.put(message.getKey(), values);
 			
-			// TODO - enviar replication
+			// enviar replication
+			Boolean successfullyReplicated = replicateToServers(message.getKey(), values);
 			
-			// envia PUT_OK
-			Message putOkMsg = new Message();
-			putOkMsg.setAsPutOk(message.getKey(), message.getValue(), LocalDateTime.now());
-			sendMessage(putOkMsg, clientSocket);
+			if(successfullyReplicated) {
+				// envia PUT_OK
+				Message putOkMsg = new Message();
+				putOkMsg.setAsPutOk(message.getKey(), message.getValue(), LocalDateTime.now());
+				sendMessage(putOkMsg, clientSocket);
+			} else {
+				System.out.println("Failed to replicate objects");
+			}
+
 		} else {
 			// redirecionando PUT para o líder
 			Socket serverToLeaderSocket = new Socket("127.0.0.1", leaderPort);
@@ -111,7 +121,60 @@ public class Server {
 			sendMessage(responseMsg, clientSocket);
 		}
 	}
+	
+	private void checkReplicationMessage(Message receivedMsg, Socket socket) throws IOException {
 		
+		try {
+			register.put(receivedMsg.getKey(), Arrays.asList(receivedMsg.getValue(), receivedMsg.getTimeStamp()));
+			Message message = new Message();
+			message.setAsReplicationOK(receivedMsg.getKey(), receivedMsg.getValue(), receivedMsg.getTimeStamp());
+			sendMessage(message, socket);
+			
+		} catch (Exception ex) {
+			Message message = new Message();
+			message.setAsReplicationNOK(receivedMsg.getKey(), receivedMsg.getValue(), receivedMsg.getTimeStamp());
+			sendMessage(message, socket);
+			System.out.println(ex.getMessage());
+		}
+	}
+		
+	private Boolean replicateToServers(String key, List<Object> values) throws IOException {
+		Set<Integer> serversPorts = new HashSet<>();
+		serversPorts.add(10097);
+		serversPorts.add(10098);
+		//serversPorts.add(10099);
+		
+		for(Integer port: serversPorts) {
+			if(!port.equals(this.port)) {
+				Message message = new Message();
+				message.setAsReplication(key, 
+						(String)values.get(0), 
+						(LocalDateTime)values.get(1));
+				
+				// redirecionando para outros servidores
+				Socket serverSocket = new Socket("127.0.0.1", port);
+				sendMessage(message, serverSocket);
+				
+				// stream de leitura para aguardar resposta 
+				InputStreamReader is = new InputStreamReader(serverSocket.getInputStream());
+				BufferedReader reader = new BufferedReader(is);
+				String response = reader.readLine();
+				
+				// criando json da mensagem
+				Message responseMsg = Message.fromJson(response);
+				
+				// se qualquer um dos servidores responder como NOK, retorna falso
+				if(responseMsg.getType() == MessageType.REPLICATION_NOK)
+					return false;
+				
+				System.out.println("Replicado com sucesso para [" + port + "]");
+				serverSocket.close();
+			}
+		}
+		
+		return true;
+	}
+	
 	/**
 	 * Verifica se a instância de servidor atual é o líder
 	 * @return Boolean true ou false
@@ -160,10 +223,14 @@ public class Server {
 			checkPutMessage(receivedMsg, socket);
 		else if(receivedMsg.getType() == MessageType.GET)
 			checkGetMessage(receivedMsg, socket);
+		else if(receivedMsg.getType() == MessageType.REPLICATION)
+			checkReplicationMessage(receivedMsg, socket);
+		else
+			return;
 	}
 	
 	// MÉTODO MAIN E DEPENDÊNCIAS --------------------------------------
-	
+
 	private static Scanner keyboard;
 
 	public static void main(String[] args) {

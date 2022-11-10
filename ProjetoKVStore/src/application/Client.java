@@ -8,8 +8,11 @@ import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
@@ -18,6 +21,8 @@ public class Client {
 
 	// relação de portas dos servidores
 	private Set<Integer> serversPorts = new HashSet<Integer>();
+	// hashtable das chaves registras
+	Hashtable<String, LocalDateTime> register = new Hashtable<String, LocalDateTime>();
 
 	private static Scanner keyboard;
 
@@ -44,8 +49,14 @@ public class Client {
 			// criando mensagem
 			Message message = new Message();
 			message.setAsPut(key, value);
+			
 			// aguardando resposta
 			Message response = sendMessage(message);
+			// registrando key + timestamp
+			register.put(response.getKey(), response.getTimeStamp());
+			
+			for(String k: register.keySet())
+				System.out.println(register.get(k));
 		});
 
 		th.start();
@@ -57,11 +68,19 @@ public class Client {
 	 */
 	public void sendGetMessage(String key) {
 		Thread th = new Thread(() -> {
-			// criando mensagem
-			Message message = new Message();
-			message.setAsGet(key);
-			// aguardando resposta
-			Message response = sendMessage(message);
+			
+			if(register.get(key) != null) {
+				// criando mensagem
+				Message message = new Message();
+				message.setAsGet(key, 
+						Message.timeStampToString(register.get(key)));
+				
+				// aguardando resposta
+				Message response = sendMessage(message);
+			} else {
+				System.out.println("The requested resource is not registered");
+			}
+
 		});
 
 		th.start();

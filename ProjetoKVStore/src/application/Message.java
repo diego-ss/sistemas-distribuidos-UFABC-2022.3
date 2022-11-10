@@ -12,9 +12,12 @@ public class Message {
 		PUT,
 		GET,
 		REPLICATION,
+		REPLICATION_OK,
+		REPLICATION_NOK,
 		// mensagens de resposta
 		PUT_OK,
-		PUT_NOK
+		PUT_NOK,
+		TRY_OTHER_SERVER_OR_LATER
 	}
 	
 	private MessageType type;
@@ -27,6 +30,15 @@ public class Message {
 		this.id = UUID.randomUUID();
 	}
 	
+	public static String timeStampToString(LocalDateTime timeStamp) {
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+		return timeStamp.format(formatter);
+	}
+	
+	public static LocalDateTime stringToDateTime(String timeStampString) {
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+		return LocalDateTime.parse(timeStampString, formatter);
+	}
 	
 	public void setAsPut(String key, String value) {
 		this.type = MessageType.PUT;
@@ -37,15 +49,34 @@ public class Message {
 	public void setAsPutOk(String key, String value, LocalDateTime timeStamp) {
 		this.type = MessageType.PUT_OK;		
 		this.key = key;
-		this.value = value;
-		
-		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-		this.timeStamp = timeStamp.format(formatter);
+		this.value = value;		
+		this.timeStamp = timeStampToString(timeStamp);
 	}
 	
-	public void setAsGet(String key) {
+	public void setAsGet(String key, String timeStamp) {
 		this.type = MessageType.GET;
 		this.key = key;
+	}
+	
+	public void setAsReplication(String key, String value, LocalDateTime timeStamp) {
+		this.type = MessageType.REPLICATION;
+		this.key = key;
+		this.value = value;
+		this.timeStamp = timeStampToString(timeStamp);
+	}
+	
+	public void setAsReplicationOK(String key, String value, LocalDateTime timeStamp) {
+		this.type = MessageType.REPLICATION_OK;
+		this.key = key;
+		this.value = value;
+		this.timeStamp = timeStampToString(timeStamp);
+	}
+	
+	public void setAsReplicationNOK(String key, String value, LocalDateTime timeStamp) {
+		this.type = MessageType.REPLICATION_NOK;
+		this.key = key;
+		this.value = value;
+		this.timeStamp = timeStampToString(timeStamp);
 	}
 	
 	public UUID getId() {
@@ -77,8 +108,8 @@ public class Message {
 		this.value = value;
 	}
 
-	public String getTimeStamp() {
-		return timeStamp;
+	public LocalDateTime getTimeStamp() {
+		return stringToDateTime(this.timeStamp);
 	}
 
 

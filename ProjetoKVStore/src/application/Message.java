@@ -25,6 +25,7 @@ public class Message {
 	private String key;
 	private String value;
 	private String timeStamp;
+	private Integer clientPort;
 	
 	public Message() {
 		this.id = UUID.randomUUID();
@@ -127,6 +128,14 @@ public class Message {
 		this.type = type;
 	}
 
+
+	public Integer getClientPort() {
+		return clientPort;
+	}
+
+	public void setClientPort(Integer clientPort) {
+		this.clientPort = clientPort;
+	}
 
 	public String toJson() {
 		Gson gson = new Gson();

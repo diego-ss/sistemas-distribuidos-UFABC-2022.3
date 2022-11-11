@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import com.google.gson.Gson;
+
 import application.Message.MessageType;
 
 public class Server {
@@ -93,8 +95,8 @@ public class Server {
 			register.put(message.getKey(), values);
 			
 			// enviar replication
-			Boolean successfullyReplicated = replicateToServers(message.getKey(), values);
-			
+			//Boolean successfullyReplicated = replicateToServers(message.getKey(), values);
+			Boolean successfullyReplicated = true;
 			if(successfullyReplicated) {
 				// envia PUT_OK
 				Message putOkMsg = new Message();
@@ -108,14 +110,14 @@ public class Server {
 			// redirecionando PUT para o líder
 			Socket serverToLeaderSocket = new Socket("127.0.0.1", leaderPort);
 			sendMessage(message, serverToLeaderSocket);
-			
+			//serverToLeaderSocket.close();
+
 			// stream de leitura para aguardar resposta do líder
 			InputStreamReader is = new InputStreamReader(serverToLeaderSocket.getInputStream());
 			BufferedReader reader = new BufferedReader(is);
 			String response = reader.readLine();
 			// criando json da mensagem
 			Message responseMsg = Message.fromJson(response);
-			serverToLeaderSocket.close();
 			
 			// redirecionando mensagem PUT_OK do líder para o client
 			sendMessage(responseMsg, clientSocket);
@@ -142,7 +144,7 @@ public class Server {
 		Set<Integer> serversPorts = new HashSet<>();
 		serversPorts.add(10097);
 		serversPorts.add(10098);
-		//serversPorts.add(10099);
+		serversPorts.add(10099);
 		
 		for(Integer port: serversPorts) {
 			if(!port.equals(this.port)) {
@@ -218,6 +220,11 @@ public class Server {
 		Message receivedMsg = Message.fromJson(receivedMsgJson);
 		System.out.println("Mensagem recebida: " + receivedMsg);
 		
+		if(receivedMsg.getClientPort() == null)
+			receivedMsg.setClientPort(socket.getPort());
+		
+		String test = socket.getRemoteSocketAddress().toString().substring(1);
+
 		// tratando as mensagens por tipo
 		if(receivedMsg.getType() == MessageType.PUT)
 			checkPutMessage(receivedMsg, socket);

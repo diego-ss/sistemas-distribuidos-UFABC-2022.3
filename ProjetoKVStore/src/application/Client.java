@@ -94,16 +94,17 @@ public class Client {
 	public Message sendMessage(Message message) {
 		try {
 			// pegando servidor aleatório
-			Integer port = getRandomPort();
+			Integer serverPort = getRandomPort();
 
 			// criando socket e streams de escrita/leitura
-			Socket s = new Socket("127.0.0.1", port);
+			Socket s = new Socket("127.0.0.1", serverPort);
 			OutputStream os = s.getOutputStream();
 			DataOutputStream writer = new DataOutputStream(os);
 			InputStreamReader is = new InputStreamReader(s.getInputStream());
 			BufferedReader reader = new BufferedReader(is);
 
 			// enviando mensagem
+			message.setClientPort(s.getLocalPort());
 			String msgJson = message.toJson();
 			writer.writeBytes(msgJson + "\n");
 			String response = reader.readLine();

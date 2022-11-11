@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -26,21 +27,20 @@ public class Server {
 	InetAddress ip;
 	Integer port;
 	Integer leaderPort;
-	
-	// hash table no formato 
+
+	// hash table no formato
 	// (key (string), { value (string), timeStamp (localdatetime)})
 	Hashtable<String, List<Object>> register = new Hashtable<String, List<Object>>();
-	
-	
+
 	public Server(String ip, Integer port, Integer leaderPort) {
 		this.port = port;
 		this.leaderPort = leaderPort;
 		createSocket();
 	}
-	
+
 	/**
-	 * Cria o Socket de comunicação do servidor instanciado
-	 * O recebimento de mensagens é assíncrono
+	 * Cria o Socket de comunicação do servidor instanciado O recebimento de
+	 * mensagens é assíncrono
 	 */
 	private void createSocket() {
 		Thread th = new Thread(() -> {
@@ -49,8 +49,7 @@ public class Server {
 			try {
 				// criando socket
 				serverSocket = new ServerSocket(port);
-			}
-			catch (IOException e) {
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
@@ -58,11 +57,11 @@ public class Server {
 				try {
 					// recebendo pacote
 					Socket client = serverSocket.accept();
-					// capturando mensagem  
+					// capturando mensagem
 					getMessage(client);
-					
+
 				} catch (IOException e) {
-					if(!e.getMessage().toUpperCase().equals("Socket Closed".toUpperCase()))
+					if (!e.getMessage().toUpperCase().equals("Socket Closed".toUpperCase()))
 						e.printStackTrace();
 				}
 			}
@@ -70,39 +69,69 @@ public class Server {
 
 		th.start();
 	}
-	
+
 	/**
 	 * Trata mensagens do tipo GET.
-	 * @param message - Mensagem recebida do client
+	 * 
+	 * @param message      - Mensagem recebida do client
 	 * @param clientSocket - Socket de comunicação com o client ou servidor
 	 * @throws IOException
 	 */
-	private void checkGetMessage(Message message, Socket socket) {
+	private void checkGetMessage(Message message, Socket socket) throws IOException {
+		String key = message.getKey();
+		Message response = new Message();
+		List<Object> objValues = register.get(key);
 		
+		// verifica se a chave está registrada
+		if(objValues != null) {
+			// caso esteja registrada, retorna o valor
+			LocalDateTime timeStampRef = (LocalDateTime)objValues.get(1);
+			
+			// indíce randômico para simular falhas
+			Double rand = new Random().nextDouble();
+			
+			// verificando se o registro do servidor é mais antigo ou igual ao do cliente
+			if(rand >= 0.3 && (timeStampRef.isBefore(message.getTimeStamp()) || timeStampRef.isEqual(message.getTimeStamp())))
+				response.setAsGetResponse(key, (String)objValues.get(0), (LocalDateTime)objValues.get(1));
+			else 
+				response.setAsTryOtherServerOrLater(key);
+			
+		} else {
+			// caso não esteja registrada, retorna valor nulo
+			response.setAsGetResponse(key, null, message.getTimeStamp());
+		}
+		
+		sendMessage(response, socket);
 	}
-	
+
 	/**
-	 * Trata mensagens do tipo PUT. Caso seja o líder, salva os dados.Caso contrário,
-	 * redirecionado ao líder
-	 * @param message - Mensagem recebida do client
+	 * Trata mensagens do tipo PUT. Caso seja o líder, salva os dados.Caso
+	 * contrário, redirecionado ao líder
+	 * 
+	 * @param message      - Mensagem recebida do client
 	 * @param clientSocket - Socket de comunicação com o client ou servidor
 	 * @throws IOException
 	 */
 	private void checkPutMessage(Message message, Socket clientSocket) throws IOException {
-		if(iAmLeader()) {
+		if (iAmLeader()) {
 			// registra key, value e time stamp
 			List<Object> values = Arrays.asList(message.getValue(), LocalDateTime.now());
 			register.put(message.getKey(), values);
-			
+
 			// enviar replication
-			//Boolean successfullyReplicated = replicateToServers(message.getKey(), values);
-			Boolean successfullyReplicated = true;
-			if(successfullyReplicated) {
+			Boolean successfullyReplicated = replicateToServers(message.getKey(), values);
+			Message putMsg = new Message();
+
+			//Boolean successfullyReplicated = true;
+			if (successfullyReplicated) {
 				// envia PUT_OK
-				Message putOkMsg = new Message();
-				putOkMsg.setAsPutOk(message.getKey(), message.getValue(), LocalDateTime.now());
-				sendMessage(putOkMsg, clientSocket);
+				putMsg.setAsPutOk(message.getKey(), message.getValue(), LocalDateTime.now());
+				sendMessage(putMsg, clientSocket);
 			} else {
+				// envia PUT_NOK
+				putMsg.setAsPutNOk(message.getKey(), message.getValue());
+				register.remove(message.getKey());
+				sendMessage(putMsg, clientSocket);
 				System.out.println("Failed to replicate objects");
 			}
 
@@ -110,7 +139,7 @@ public class Server {
 			// redirecionando PUT para o líder
 			Socket serverToLeaderSocket = new Socket("127.0.0.1", leaderPort);
 			sendMessage(message, serverToLeaderSocket);
-			//serverToLeaderSocket.close();
+			// serverToLeaderSocket.close();
 
 			// stream de leitura para aguardar resposta do líder
 			InputStreamReader is = new InputStreamReader(serverToLeaderSocket.getInputStream());
@@ -118,65 +147,89 @@ public class Server {
 			String response = reader.readLine();
 			// criando json da mensagem
 			Message responseMsg = Message.fromJson(response);
-			
+
 			// redirecionando mensagem PUT_OK do líder para o client
 			sendMessage(responseMsg, clientSocket);
 		}
 	}
-	
+
+	/**
+	 * Trata mensagens do tipo Replication recebidas
+	 * @param receivedMsg - mensagem recebida
+	 * @param socket - socket de origem da mensagem
+	 * @throws IOException
+	 */
 	private void checkReplicationMessage(Message receivedMsg, Socket socket) throws IOException {
-		
+
 		try {
+			// registra a key e os valores no register
 			register.put(receivedMsg.getKey(), Arrays.asList(receivedMsg.getValue(), receivedMsg.getTimeStamp()));
 			Message message = new Message();
+			// enviando responsta
 			message.setAsReplicationOK(receivedMsg.getKey(), receivedMsg.getValue(), receivedMsg.getTimeStamp());
 			sendMessage(message, socket);
-			
+
 		} catch (Exception ex) {
+			// em caso de falha, envia REPLICATION_NOK e printa o erro
 			Message message = new Message();
 			message.setAsReplicationNOK(receivedMsg.getKey(), receivedMsg.getValue(), receivedMsg.getTimeStamp());
 			sendMessage(message, socket);
 			System.out.println(ex.getMessage());
 		}
 	}
-		
+
+	/**
+	 * Replica um objeto chave-valor para os demais servidores
+	 * @param key - chave
+	 * @param values - lista de tamanho 2 com valor e timestamp
+	 * @return true ou false
+	 * @throws IOException
+	 */
 	private Boolean replicateToServers(String key, List<Object> values) throws IOException {
 		Set<Integer> serversPorts = new HashSet<>();
+		// portas fixadas hard-coded
 		serversPorts.add(10097);
 		serversPorts.add(10098);
 		serversPorts.add(10099);
-		
-		for(Integer port: serversPorts) {
-			if(!port.equals(this.port)) {
+
+		// redirecionando para outros servidores
+		for (Integer port : serversPorts) {
+			// ignora o próprio líder
+			if (!port.equals(this.port)) {
 				Message message = new Message();
-				message.setAsReplication(key, 
-						(String)values.get(0), 
-						(LocalDateTime)values.get(1));
+				message.setAsReplication(key, (String) values.get(0), (LocalDateTime) values.get(1));
+
+				Socket serverSocket = null;
+				try {
+					// caso não exista servidor em uma das portas, ignora
+					serverSocket = new Socket("127.0.0.1", port);
+				} catch(Exception ex) {
+					continue;
+				}
 				
-				// redirecionando para outros servidores
-				Socket serverSocket = new Socket("127.0.0.1", port);
+				// enviando mensagem
 				sendMessage(message, serverSocket);
-				
-				// stream de leitura para aguardar resposta 
+
+				// stream de leitura para aguardar resposta
 				InputStreamReader is = new InputStreamReader(serverSocket.getInputStream());
 				BufferedReader reader = new BufferedReader(is);
 				String response = reader.readLine();
-				
+
 				// criando json da mensagem
 				Message responseMsg = Message.fromJson(response);
-				
+
 				// se qualquer um dos servidores responder como NOK, retorna falso
-				if(responseMsg.getType() == MessageType.REPLICATION_NOK)
+				if (responseMsg.getType() == MessageType.REPLICATION_NOK)
 					return false;
-				
+
 				System.out.println("Replicado com sucesso para [" + port + "]");
 				serverSocket.close();
 			}
 		}
-		
+
 		return true;
 	}
-	
+
 	/**
 	 * Verifica se a instância de servidor atual é o líder
 	 * @return Boolean true ou false
@@ -184,10 +237,11 @@ public class Server {
 	private Boolean iAmLeader() {
 		return leaderPort.equals(port);
 	}
-	
+
 	/**
 	 * Envia uma mensagem ao socket informado
-	 * @param message - Mensagem a ser enviada
+	 * 
+	 * @param message    - Mensagem a ser enviada
 	 * @param destSocket - Socket de destino
 	 * @throws IOException
 	 */
@@ -200,61 +254,66 @@ public class Server {
 		// enviando mensagem
 		writer.writeBytes(msgJson + "\n");
 	}
-	
+
 	/**
 	 * Captura mensagens recebidas no socket do servidor instanciado
+	 * 
 	 * @param socket - Socket de origem da mensagem recebida
 	 * @throws IOException
 	 */
 	private void getMessage(Socket socket) throws IOException {
-		// stream de leitura
-		InputStreamReader is = new InputStreamReader(socket.getInputStream());
-		BufferedReader reader = new BufferedReader(is);
-		
-		// stream de escrita
-		OutputStream os = socket.getOutputStream();
-		DataOutputStream writer = new DataOutputStream(os);
-		
-		// convertendo json em mensagem
-		String receivedMsgJson = reader.readLine();
-		Message receivedMsg = Message.fromJson(receivedMsgJson);
-		System.out.println("Mensagem recebida: " + receivedMsg);
-		
-		if(receivedMsg.getClientPort() == null)
-			receivedMsg.setClientPort(socket.getPort());
-		
-		String test = socket.getRemoteSocketAddress().toString().substring(1);
+		Thread th = new Thread(() -> {
 
-		// tratando as mensagens por tipo
-		if(receivedMsg.getType() == MessageType.PUT)
-			checkPutMessage(receivedMsg, socket);
-		else if(receivedMsg.getType() == MessageType.GET)
-			checkGetMessage(receivedMsg, socket);
-		else if(receivedMsg.getType() == MessageType.REPLICATION)
-			checkReplicationMessage(receivedMsg, socket);
-		else
-			return;
+			try {
+				// stream de leitura
+				InputStreamReader is = new InputStreamReader(socket.getInputStream());
+				BufferedReader reader = new BufferedReader(is);
+
+				// stream de escrita
+				OutputStream os = socket.getOutputStream();
+				DataOutputStream writer = new DataOutputStream(os);
+
+				// convertendo json em mensagem
+				String receivedMsgJson = receivedMsgJson = reader.readLine();
+				Message receivedMsg = Message.fromJson(receivedMsgJson);
+				System.out.println("Mensagem recebida: " + receivedMsg);
+
+				// tratando as mensagens por tipo
+				if (receivedMsg.getType() == MessageType.PUT)
+					checkPutMessage(receivedMsg, socket);
+				else if (receivedMsg.getType() == MessageType.GET)
+					checkGetMessage(receivedMsg, socket);
+				else if (receivedMsg.getType() == MessageType.REPLICATION)
+					checkReplicationMessage(receivedMsg, socket);
+				else
+					return;
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+
+		});
+
+		th.start();
 	}
-	
+
 	// MÉTODO MAIN E DEPENDÊNCIAS --------------------------------------
 
 	private static Scanner keyboard;
 
 	public static void main(String[] args) {
-		
+
 		keyboard = new Scanner(System.in);
 		System.out.println("Informe o IP: ");
 		String ip = keyboard.next();
 		System.out.println("Informe a porta: ");
 		Integer port = keyboard.nextInt();
-		
+
 		System.out.println("Informe a porta do líder: ");
 		Integer leaderPort = keyboard.nextInt();
 
-		
 		new Server(ip, port, leaderPort);
 		System.out.println("Servidor online");
-		
-		
+
 	}
 }

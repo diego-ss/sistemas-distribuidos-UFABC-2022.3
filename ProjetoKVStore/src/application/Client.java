@@ -17,6 +17,8 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+import application.Message.MessageType;
+
 public class Client {
 
 	// relação de portas dos servidores
@@ -52,11 +54,12 @@ public class Client {
 			
 			// aguardando resposta
 			Message response = sendMessage(message);
-			// registrando key + timestamp
-			register.put(response.getKey(), response.getTimeStamp());
 			
-			for(String k: register.keySet())
-				System.out.println(register.get(k));
+			// registrando key + timestamp 
+			if(response.getType() == MessageType.PUT_OK)
+				register.put(key, response.getTimeStamp());
+			else
+				System.out.println("The put request was not successful");
 		});
 
 		th.start();
@@ -72,13 +75,12 @@ public class Client {
 			if(register.get(key) != null) {
 				// criando mensagem
 				Message message = new Message();
-				message.setAsGet(key, 
-						Message.timeStampToString(register.get(key)));
+				message.setAsGet(key, register.get(key));
 				
 				// aguardando resposta
 				Message response = sendMessage(message);
 			} else {
-				System.out.println("The requested resource is not registered");
+				System.out.println("The requested resource was not registered yet");
 			}
 
 		});

@@ -12,12 +12,13 @@ public class Message {
 		PUT,
 		GET,
 		REPLICATION,
-		REPLICATION_OK,
-		REPLICATION_NOK,
 		// mensagens de resposta
+		GET_RESPONSE,
 		PUT_OK,
 		PUT_NOK,
-		TRY_OTHER_SERVER_OR_LATER
+		TRY_OTHER_SERVER_OR_LATER,
+		REPLICATION_OK,
+		REPLICATION_NOK,
 	}
 	
 	private MessageType type;
@@ -32,11 +33,17 @@ public class Message {
 	}
 	
 	public static String timeStampToString(LocalDateTime timeStamp) {
+		if(timeStamp == null)
+			return null;
+		
 		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
 		return timeStamp.format(formatter);
 	}
 	
 	public static LocalDateTime stringToDateTime(String timeStampString) {
+		if(timeStampString == null)
+			return null;
+		
 		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
 		return LocalDateTime.parse(timeStampString, formatter);
 	}
@@ -47,6 +54,11 @@ public class Message {
 		this.value = value;
 	}
 	
+	public void setAsTryOtherServerOrLater(String key) {
+		this.type = MessageType.TRY_OTHER_SERVER_OR_LATER;
+		this.key = key;
+	}
+	
 	public void setAsPutOk(String key, String value, LocalDateTime timeStamp) {
 		this.type = MessageType.PUT_OK;		
 		this.key = key;
@@ -54,9 +66,23 @@ public class Message {
 		this.timeStamp = timeStampToString(timeStamp);
 	}
 	
-	public void setAsGet(String key, String timeStamp) {
+	public void setAsPutNOk(String key, String value) {
+		this.type = MessageType.PUT_NOK;		
+		this.key = key;
+		this.value = value;		
+	}
+	
+	public void setAsGet(String key, LocalDateTime timeStamp) {
 		this.type = MessageType.GET;
 		this.key = key;
+		this.timeStamp = timeStampToString(timeStamp);
+	}
+	
+	public void setAsGetResponse(String key, String value, LocalDateTime timeStamp) {
+		this.type = MessageType.GET_RESPONSE;
+		this.key = key;
+		this.value = value;
+		this.timeStamp = timeStampToString(timeStamp);
 	}
 	
 	public void setAsReplication(String key, String value, LocalDateTime timeStamp) {

@@ -9,16 +9,38 @@ import com.google.gson.Gson;
 public class Message {
 	public enum MessageType {
 		// mensagens de requisição
-		PUT,
-		GET,
-		REPLICATION,
+		PUT("PUT"),
+		GET("GET"),
+		REPLICATION("REPLICATION"),
 		// mensagens de resposta
-		GET_RESPONSE,
-		PUT_OK,
-		PUT_NOK,
-		TRY_OTHER_SERVER_OR_LATER,
-		REPLICATION_OK,
-		REPLICATION_NOK,
+		GET_RESPONSE("GET"),
+		PUT_OK("PUT_OK"),
+		PUT_NOK("PUT_NOK"),
+		TRY_OTHER_SERVER_OR_LATER("TRY_OTHER_SERVER_OR_LATER"),
+		REPLICATION_OK("REPLICATION_OK"),
+		REPLICATION_NOK("REPLICATION_NOK");
+		
+	    private final String name;       
+
+	    private MessageType(String s) {
+	        name = s;
+	    }
+	    
+	    public String toString() {
+	        return this.name;
+	     }
+	    
+	    public boolean equalsName(String otherName) {
+	        return name.equals(otherName);
+	    }
+	    
+	    public static String getName(MessageType type) {
+	    	for(MessageType t: MessageType.values()) {
+	    		if(type.equals(t))
+	    			return t.toString();
+	    	}
+	    	return null;
+	    }
 	}
 	
 	private MessageType type;

@@ -72,16 +72,12 @@ public class Client {
 	public void sendGetMessage(String key) {
 		Thread th = new Thread(() -> {
 			
-			if(register.get(key) != null) {
 				// criando mensagem
 				Message message = new Message();
 				message.setAsGet(key, register.get(key));
 				
 				// aguardando resposta
 				Message response = sendMessage(message);
-			} else {
-				System.out.println("The requested resource was not registered yet");
-			}
 
 		});
 
@@ -93,7 +89,7 @@ public class Client {
 	 * @param message - mensagem a ser enviada
 	 * @return resposta do servidor
 	 */
-	public Message sendMessage(Message message) {
+	private Message sendMessage(Message message) {
 		try {
 			// pegando servidor aleatório
 			Integer serverPort = getRandomPort();
@@ -109,9 +105,17 @@ public class Client {
 			message.setClientPort(s.getLocalPort());
 			String msgJson = message.toJson();
 			writer.writeBytes(msgJson + "\n");
+			// aguardando o retorno
 			String response = reader.readLine();
 			Message responseMsg = Message.fromJson(response);
-			System.out.println(responseMsg);
+			
+			String msgType = MessageType.getName(responseMsg.getType());
+			// imprimindo resultado
+			System.out.println(String.format("%s key '%s' value '%s' timestamp %s %s no servidor %s:%d",
+					msgType, responseMsg.getKey(), responseMsg.getValue(), 
+					Message.timeStampToString(responseMsg.getTimeStamp()),
+					(msgType == "GET" || msgType == "TRY_OTHER_SERVER_OR_LATER") ? "obtida": "realizada","127.0.0.1", serverPort));
+			
 			s.close();
 			return responseMsg;
 			
@@ -126,9 +130,10 @@ public class Client {
 	 * @return porta de servidor aleatória
 	 */
 	private Integer getRandomPort() {
+		// criando random
 		Random random = new Random();
 		int randomIndex = random.nextInt(serversPorts.size());
-
+		// capturando iterator
 		Iterator<Integer> iterator = serversPorts.iterator();
 
 		int currentIndex = 0;
@@ -139,11 +144,10 @@ public class Client {
 
 			randomElement = iterator.next();
 
-			// if current index is equal to random number
+			// verificando o index igual ao número randômico
 			if (currentIndex == randomIndex)
 				return randomElement;
 
-			// increase the current index
 			currentIndex++;
 		}
 
@@ -175,16 +179,20 @@ public class Client {
 				client.addServerPort(keyboard.nextInt());
 				
 			} else if (option.contains("2") || option.toUpperCase().contains("PUT")) {
+				// captura informações do teclado e envia mensagem de put
 				System.out.print("Informe a chave: ");
-				String key = keyboard.next();
+				keyboard.nextLine();
+				String key = keyboard.nextLine();
 				
 				System.out.print("\nInforme o valor: ");
-				String value = keyboard.next();
+				String value = keyboard.nextLine();
 				
 				client.sendPutMessage(key, value);
 			} else if (option.contains("3") || option.toUpperCase().contains("GET")) {
+				// captura informações do teclado e envia mensagem de get
 				System.out.print("Informe a chave: ");
-				String key = keyboard.next();
+				keyboard.nextLine();
+				String key = keyboard.nextLine();
 				
 				client.sendGetMessage(key);
 			} else

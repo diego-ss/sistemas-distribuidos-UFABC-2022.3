@@ -192,7 +192,7 @@ public class Server {
 			if (successfullyReplicated) {
 				// Printando Mensagem do Servidor
 				System.out.println(String.format("Enviando PUT_OK ao Cliente 127.0.0.1:%d da key:'%s' timestamp:'%s'",
-						message.getClientPort(), message.getKey(),  Message.timeStampToString(message.getTimeStamp())));
+						message.getClientPort(), message.getKey(),  Message.timeStampToString(registerTime)));
 				
 				// envia PUT_OK
 				putMsg.setAsPutOk(message.getKey(), message.getValue(), registerTime);
@@ -300,7 +300,7 @@ public class Server {
 				if (responseMsg.getType() == MessageType.REPLICATION_NOK)
 					return false;
 
-				System.out.println("Replicado com sucesso para [" + port + "]");
+				// System.out.println("Replicado com sucesso para [" + port + "]");
 				serverSocket.close();
 			}
 		}

@@ -139,7 +139,7 @@ public class Client {
 		int currentIndex = 0;
 		Integer randomElement = null;
 
-		// iterate the HashSet
+		// iterando o hashset
 		while (iterator.hasNext()) {
 
 			randomElement = iterator.next();
